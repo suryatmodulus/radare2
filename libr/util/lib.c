@@ -41,7 +41,7 @@ R_API void *r_lib_dl_open(const char *libname) {
 		ret = dlopen (libname, RTLD_NOW);
 #endif
 		if (!ret) {
-			ret = dlopen (libname, RTLD_GLOBAL | RTLD_LAZY);
+			ret = dlopen (libname, RTLD_GLOBAL | RTLD_NOW); // LAZY);
 		}
 	} else {
 		ret = dlopen (NULL, RTLD_NOW);
