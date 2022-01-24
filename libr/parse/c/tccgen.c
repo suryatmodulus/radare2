@@ -904,7 +904,6 @@ static void parse_attribute(TCCState *s1, AttributeDef *ad) {
 /* enum/struct/union declaration. u is either VT_ENUM, VT_STRUCT or VT_UNION */
 static void struct_decl(TCCState *s1, CType *type, int u, bool is_typedef) {
 	int v, size, align, maxalign, offset;
-	long long c = 0;
 	int bit_size, bit_pos, bsize, bt, lbit_pos, prevbt;
 	char buf[STRING_MAX_SIZE + 1];
 	Sym *s, *ss, *ass, **ps;
@@ -956,37 +955,36 @@ do_decl:
 			TCC_ERR ("struct/union/enum already defined");
 		}
 		/* cannot be empty */
-		c = 0LL;
+		ut64 iota = 0LL;
 		/* non empty enums are not allowed */
 		if (a == TOK_ENUM) {
 			if (!strcmp (name, "{")) {
 				// UNNAMED
-				fprintf (stderr, "anonymous enums are ignored\n");
+				eprintf ("anonymous enums are ignored\n");
 			}
 			while (tcc_nerr (s1) == 0) {
 				v = s1->tok;
 				if (v < TOK_UIDENT) {
-					eprintf ("%d %d\n", v, TOK_UIDENT);
 					expect ("identifier");
 					break;
 				}
 				next (s1);
 				if (s1->tok == '=') {
 					next (s1);
-					c = expr_const (s1);
+					iota = expr_const (s1);
 				}
 				// TODO: use is_typedef here
 				if (strcmp (name, "{")) {
 					const char *varstr = get_tok_str (s1, v, NULL);
 					tcc_appendf ("%s=enum\n", name);
 					tcc_appendf ("[+]enum.%s=%s\n", name, varstr);
-					tcc_appendf ("enum.%s.%s=0x%"PFMT64x "\n", name, varstr, c);
-					tcc_appendf ("enum.%s.0x%"PFMT64x "=%s\n", name, c, varstr);
+					tcc_appendf ("enum.%s.%s=0x%"PFMT64x "\n", name, varstr, iota);
+					tcc_appendf ("enum.%s.0x%"PFMT64x "=%s\n", name, iota, varstr);
 					// TODO: if token already defined throw an error
 					// if (varstr isInside (arrayOfvars)) { erprintf ("ERROR: DUP VAR IN ENUM\n"); }
 				}
 				/* enum symbols have static storage */
-				ss = sym_push (s1, v, &int64_type, VT_CONST, c);
+				ss = sym_push (s1, v, &int64_type, VT_CONST, iota);
 				if (!ss) {
 					return;
 				}
@@ -995,7 +993,7 @@ do_decl:
 					break;
 				}
 				next (s1);
-				c++;
+				iota++;
 				/* NOTE: we accept a trailing comma */
 				if (s1->tok == '}') {
 					break;
@@ -1109,15 +1107,15 @@ do_decl:
 						   bit field */
 						if (lbit_pos == 0) {
 							if (a == TOK_STRUCT) {
-								c = (c + align - 1) & - align;
-								offset = c;
+								iota = (iota + align - 1) & - align;
+								offset = iota;
 								if (size > 0) {
-									c += size;
+									iota += size;
 								}
 							} else {
 								offset = 0;
-								if (size > c) {
-									c = size;
+								if (size > iota) {
+									iota = size;
 								}
 							}
 							if (align > maxalign) {
@@ -1189,7 +1187,7 @@ do_decl:
 			}
 			skip (s1, '}');
 			/* store size and alignment */
-			s->c = (c + maxalign - 1) & - maxalign;
+			s->c = (iota + maxalign - 1) & - maxalign;
 			s->r = maxalign;
 		}
 	}
@@ -1803,8 +1801,6 @@ static void unary(TCCState *s1) {
 
 	sizeof_caller = in_sizeof;
 	in_sizeof = 0;
-	/* XXX: GCC 2.95.3 does not generate a table although it should be
-	   better here */
 tok_next:
 	switch (s1->tok) {
 	case TOK_EXTENSION:
@@ -2050,7 +2046,9 @@ tok_identifier:
 		t = s1->tok;
 		next (s1);
 		if (t < TOK_UIDENT) {
+			eprintf ("%d %d\n", t, TOK_UIDENT);
 			expect ("identifier5");
+			break;
 		}
 		s = sym_find (s1, t);
 		if (!s) {
@@ -2271,15 +2269,13 @@ static void expr_cond(TCCState *s1) {
 }
 
 static void expr_eq(TCCState *s1) {
-	int t;
-
 	expr_cond (s1);
 	if (s1->tok == '=' ||
 	    (s1->tok >= TOK_A_MOD && s1->tok <= TOK_A_DIV) ||
 	    s1->tok == TOK_A_XOR || s1->tok == TOK_A_OR ||
 	    s1->tok == TOK_A_SHL || s1->tok == TOK_A_SAR) {
 		test_lvalue (s1);
-		t = s1->tok;
+		int t = s1->tok;
 		next (s1);
 		if (t == '=') {
 			expr_eq (s1);
@@ -2322,6 +2318,7 @@ ST_FUNC long long expr_const(TCCState *s1) {
 	expr_const1 (s1);
 	if ((s1->vtop->r & (VT_VALMASK | VT_LVAL | VT_SYM)) != VT_CONST) {
 		expect ("constant expression");
+		return 0;
 	}
 	return s1->vtop->c.ll;
 }
@@ -2628,7 +2625,7 @@ static void decl_initializer(TCCState *s1, CType *type, unsigned long c, int fir
 		if (n < 0) {
 			s->c = array_length;
 		}
-	} else if (is_structured(type) && (!first || s1->tok == '{')) {
+	} else if (is_structured (type) && (!first || s1->tok == '{')) {
 		int par_count;
 
 		/* NOTE: the previous test is a specific case for automatic
@@ -2767,11 +2764,12 @@ static void decl_initializer_alloc(TCCState *s1, CType *type, AttributeDef *ad, 
 	Sym *flexible_array;
 
 	flexible_array = NULL;
-	if (is_struct(type)) {
+	if (is_struct (type)) {
 		Sym *field;
 		field = type->ref;
-		while (field && field->next)
+		while (field && field->next) {
 			field = field->next;
+		}
 		if (field && (field->type.t & VT_ARRAY) && (field->type.ref->c < 0)) {
 			flexible_array = field;
 		}
@@ -2968,8 +2966,8 @@ static void func_decl_list(TCCState *s1, Sym *func_sym) {
 }
 #endif
 
-#if 1
 /* 'l' is VT_LOCAL or VT_CONST to define default storage type */
+// TODO: must return bool
 static int decl0(TCCState *s1, int l, int is_for_loop_init) {
 	int v, has_init, r;
 	CType type = {.t = 0, .ref = NULL}, btype = {.t = 0, .ref = NULL};
@@ -3160,4 +3158,3 @@ func_error1:
 	}
 	return 0;
 }
-#endif
