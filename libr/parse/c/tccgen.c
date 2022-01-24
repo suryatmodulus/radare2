@@ -33,7 +33,7 @@ ST_DATA CType int8_type, int16_type, int32_type, int64_type, size_type;
 
 /* ------------------------------------------------------------------------- */
 static inline CType *pointed_type(CType *type);
-static int is_compatible_types(CType *type1, CType *type2);
+static bool is_compatible_types(CType *type1, CType *type2);
 static void expr_type(TCCState *s1, CType *type);
 static int parse_btype(TCCState *s1, CType *type, AttributeDef *ad);
 static void type_decl(TCCState *s1, CType *type, AttributeDef *ad, int *v, int td);
@@ -42,7 +42,7 @@ static void decl_initializer_alloc(TCCState *s1, CType *type, AttributeDef *ad, 
 static int decl0(TCCState *s1, int l, int is_for_loop_init);
 static void expr_eq(TCCState *s1);
 static void unary_type(TCCState *s1, CType *type);
-static int is_compatible_parameter_types(CType *type1, CType *type2);
+static bool is_compatible_parameter_types(CType *type1, CType *type2);
 
 /* ------------------------------------------------------------------------- */
 ST_INLN bool is_structured(CType *t) {
@@ -545,37 +545,37 @@ ST_FUNC void mk_pointer(TCCState *s1, CType *type) {
 }
 
 /* compare function types. OLD functions match any new functions */
-static int is_compatible_func(CType *type1, CType *type2) {
+static bool is_compatible_func(CType *type1, CType *type2) {
 	Sym *s1 = type1->ref;
 	Sym *s2 = type2->ref;
 	if (!is_compatible_types (&s1->type, &s2->type)) {
-		return 0;
+		return false;
 	}
 	/* check func_call */
 	if (FUNC_CALL (s1->r) != FUNC_CALL (s2->r)) {
-		return 0;
+		return false;
 	}
 	/* XXX: not complete */
 	if (s1->c == FUNC_OLD || s2->c == FUNC_OLD) {
-		return 1;
+		return true;
 	}
 	if (s1->c != s2->c) {
-		return 0;
+		return false;
 	}
-	while (s1 != NULL) {
-		if (s2 == NULL) {
-			return 0;
+	while (s1) {
+		if (!s2) {
+			return false;
 		}
 		if (!is_compatible_parameter_types (&s1->type, &s2->type)) {
-			return 0;
+			return false;
 		}
 		s1 = s1->next;
 		s2 = s2->next;
 	}
 	if (s2) {
-		return 0;
+		return false;
 	}
-	return 1;
+	return true;
 }
 
 /* return true if type1 and type2 are the same.  If unqualified is
@@ -583,7 +583,7 @@ static int is_compatible_func(CType *type1, CType *type2) {
 
    - enums are not checked as gcc __builtin_types_compatible_p ()
  */
-static int compare_types(CType *type1, CType *type2, int unqualified) {
+static bool compare_types(CType *type1, CType *type2, int unqualified) {
 	int t1 = type1->t & VT_TYPE;
 	int t2 = type2->t & VT_TYPE;
 	if (unqualified) {
@@ -593,7 +593,7 @@ static int compare_types(CType *type1, CType *type2, int unqualified) {
 	}
 	/* XXX: bitfields ? */
 	if (t1 != t2) {
-		return 0;
+		return false;
 	}
 	/* test more complicated cases */
 	int bt1 = t1 & VT_BTYPE;
@@ -605,21 +605,20 @@ static int compare_types(CType *type1, CType *type2, int unqualified) {
 		return type1->ref == type2->ref;
 	} else if (bt1 == VT_FUNC) {
 		return is_compatible_func (type1, type2);
-	} else {
-		return 1;
 	}
+	return true;
 }
 
 /* return true if type1 and type2 are exactly the same (including
    qualifiers).
 */
-static int is_compatible_types(CType *type1, CType *type2) {
+static bool is_compatible_types(CType *type1, CType *type2) {
 	return compare_types (type1, type2, 0);
 }
 
 /* return true if type1 and type2 are the same (ignoring qualifiers).
 */
-static int is_compatible_parameter_types(CType *type1, CType *type2) {
+static bool is_compatible_parameter_types(CType *type1, CType *type2) {
 	return compare_types (type1, type2, 1);
 }
 
