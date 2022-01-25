@@ -464,11 +464,6 @@ anon_sym: anonymous symbol index
 	 */
 	int anon_sym; //  = SYM_FIRST_ANOM;
 	int loc;
-#if 0
-	Sym *sym_free_first;
-	void **sym_pools;
-	int nb_sym_pools;
-#endif
 	int ch, tok;
 	CValue tokc;
 	const int *macro_ptr;
@@ -499,9 +494,9 @@ anon_sym: anonymous symbol index
 	char *dir_name;
 
 #define SYM_POOL_NB (8192 / sizeof(Sym))
-CType char_pointer_type, func_old_type;
-CType int8_type, int16_type, int32_type, int64_type, size_type;
-SValue vstack[1+/*to make bcheck happy*/ VSTACK_SIZE];
+	CType char_pointer_type, func_old_type;
+	CType int8_type, int16_type, int32_type, int64_type, size_type;
+	SValue vstack[1+/*to make bcheck happy*/ VSTACK_SIZE];
 // #define vstack  (s1->__vstack + 1)
 	SValue *vtop;
 	// more
@@ -948,25 +943,5 @@ PUB_FUNC void tcc_typedef_appendf(const char *fmt, ...);
 PUB_FUNC void tcc_typedef_alias_fields(const char *alias);
 
 extern void (*tcc_cb)(const char *, char **);
-
-#if 0
-ST_DATA bool nocode_wanted;
-// XXX?
-static BufferedFile *file;
-static char *funcname;
-ST_DATA Sym *define_stack;
-ST_DATA int tok_flags;
-ST_DATA int parse_flags;
-
-ST_DATA Sym *global_stack;
-ST_DATA Sym *local_stack;
-ST_DATA Sym *define_stack;
-
-ST_DATA void **sym_pools;
-ST_DATA int nb_sym_pools;
-
-ST_DATA Sym *sym_free_first;
-ST_DATA char *dir_name;
-#endif
 
 #endif /* _TCC_H */

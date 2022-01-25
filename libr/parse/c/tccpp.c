@@ -1471,7 +1471,7 @@ include_syntax:
 include_trynext:
 				continue;
 			}
-			fprintf (stderr, "#include \"%s\"\n", buf1);
+			eprintf ("#include \"%s\"\n", buf1);
 
 #ifdef INC_DEBUG
 			eprintf ("%s: including %s\n", s1->file->prev->filename, s1->file->filename);
@@ -1509,17 +1509,17 @@ include_trynext:
 				}
 				int len = snprintf (filepath, sizeof (filepath), "%s/%s", s1->dir_name, buf);
 				if (len >= sizeof (filepath) || tcc_open (s1, filepath) < 0) {
-					fprintf (stderr, "include file '%s' not found\n", filepath);
+					eprintf ("include file '%s' not found\n", filepath);
 					goto the_end;
 				} else {
-					fprintf (stderr, "#include \"%s\"\n", filepath);
+					eprintf ("#include \"%s\"\n", filepath);
 					++s1->include_stack_ptr;
 					tok_flags |= TOK_FLAG_BOF | TOK_FLAG_BOL;
 					s1->ch = s1->file->buf_ptr[0];
 					goto the_end;
 				}
 			} else {
-				fprintf (stderr, "#include \"%s\"\n", filepath);
+				eprintf ("#include \"%s\"\n", filepath);
 				++s1->include_stack_ptr;
 				tok_flags |= TOK_FLAG_BOF | TOK_FLAG_BOL;
 				s1->ch = s1->file->buf_ptr[0];

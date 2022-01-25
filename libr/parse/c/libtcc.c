@@ -194,8 +194,8 @@ static void error1(TCCState *s1, int is_warning, const char *fmt, va_list ap)
 	strcat_vprintf (buf, sizeof(buf), fmt, ap);
 
 	if (!s1->error_func) {
-		/* default case: stderr */
-		fprintf (stderr, "%s\n", buf);
+		/* default case */
+		eprintf ("%s\n", buf);
 	} else {
 		s1->error_func (s1->error_opaque, buf);
 	}
@@ -361,7 +361,7 @@ static int tcc_compile(TCCState *s1) {
 		}
 #if 0
 		if (pvtop != vtop) {
-			fprintf (stderr, "internal compiler error:"
+			eprintf ("internal compiler error:"
 				" vstack leak? (%d)", vtop - pvtop);
 		}
 #endif
@@ -633,7 +633,7 @@ ST_FUNC int tcc_add_file_internal(TCCState *s1, const char *filename, int flags)
 	int ret = tcc_open (s1, filename);
 	if (ret < 0) {
 		if (flags & AFF_PRINT_ERROR) {
-			fprintf (stderr, "file '%s' not found\n", filename);
+			eprintf ("file '%s' not found\n", filename);
 		}
 		return ret;
 	}
